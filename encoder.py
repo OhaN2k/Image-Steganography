@@ -1,10 +1,15 @@
 import sys
+import math
 from PIL import Image
-
-MAX_MSG_LEN = 63
 
 # Load source
 org_img = Image.open(sys.argv[1])
+
+nPixels = org_img.size[0] * org_img.size[1]
+MAX_CHAR = math.floor(nPixels*3/4)
+nSize = math.ceil(math.log(MAX_CHAR + 1, 10))
+MAX_MSG_LEN = MAX_CHAR - nSize
+print("Max message length: {} characters".format(MAX_MSG_LEN))
 
 # Get source pixel map
 org_pixelMap = org_img.load()
@@ -16,15 +21,18 @@ enc_pixelsMap = enc_img.load()
 # Get hidden message
 msg=input("Enter the message: ")
 msg_len=len(msg)
-msg+="."
+
 
 # Image size and message length check
-print("image size: {}".format(org_img.size))
-print("msg_len: {}".format(msg_len))
+
 if(msg_len > MAX_MSG_LEN):
-    print("Error: Max message length can not exceed 63 characters. Exceeded characters will be discarded.")
-if(org_img.size[0]*org_img.size[1]*3 <= MAX_MSG_LEN*4):
-    print("Error: Image carrier size too small.")
+    print("WARNING! Image size too small, the messenge will be truncated.")
+    msg = msg[0:MAX_MSG_LEN]
+    msg_len = MAX_MSG_LEN
+print("Message length: {}".format(msg_len))
+
+msg = str(msg_len).zfill(nSize) + msg
+msg+="."
 
 # Traverse pixel map
 msg_index=0
@@ -36,12 +44,7 @@ for row in range(org_img.size[0]):
         g=rgb[1]
         b=rgb[2]
 
-        # Allocate size of the message in first pixel
-        if row==0 and col==0:
-            enc_pixelsMap[row,col] = (r & 0b11111100 | ((msg_len & 0b00110000) >> 4),
-                                    g & 0b11111100 | ((msg_len & 0b00001100) >> 2),
-                                    b & 0b11111100 | (msg_len & 0b00000011))
-        elif msg_index < msg_len:
+        if msg_index < msg_len + nSize:
             c1=msg[msg_index]
             c2=msg[msg_index+1]
             c1_ascii=ord(c1)
